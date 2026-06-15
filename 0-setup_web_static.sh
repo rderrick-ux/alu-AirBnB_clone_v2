@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 # Sets up the web servers for the deployment of web_static.
 
-# Install Nginx if not already installed
-if ! command -v nginx > /dev/null 2>&1; then
-    apt-get update
-    apt-get install -y nginx
-fi
+# Install Nginx if it is not already installed
+apt-get update
+apt-get install -y nginx
 
 # Create the required folders
 mkdir -p /data/web_static/releases/test/
@@ -26,9 +24,24 @@ ln -sf /data/web_static/releases/test/ /data/web_static/current
 # Give ownership of /data/ to the ubuntu user and group, recursively
 chown -R ubuntu:ubuntu /data/
 
-# Update the Nginx configuration to serve /data/web_static/current/ to /hbnb_static
-config="\\n\\tlocation /hbnb_static/ {\\n\\t\\talias /data/web_static/current/;\\n\\t}\\n"
-sed -i "/server_name _;/a $config" /etc/nginx/sites-available/default
+# Overwrite the default Nginx site config to serve /data/web_static/current/
+# at /hbnb_static/ using an alias. Writing the whole block avoids depending on
+# any pre-existing line (server_name differs across Nginx/Ubuntu versions).
+printf '%s\n' "server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    root /var/www/html;
+    index index.html index.htm;
+    server_name _;
 
-# Restart Nginx
+    location /hbnb_static/ {
+        alias /data/web_static/current/;
+    }
+
+    location / {
+        try_files \$uri \$uri/ =404;
+    }
+}" > /etc/nginx/sites-available/default
+
+# Restart Nginx to apply the new configuration
 service nginx restart
