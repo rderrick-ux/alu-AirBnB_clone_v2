@@ -1,47 +1,45 @@
 #!/usr/bin/env bash
-# Sets up the web servers for the deployment of web_static.
+# Sets up web servers for the deployment of web_static
 
-# Install Nginx if it is not already installed
-apt-get update
+# Install Nginx
+apt-get update -y
 apt-get install -y nginx
 
-# Create the required folders
+# Create required directories
 mkdir -p /data/web_static/releases/test/
 mkdir -p /data/web_static/shared/
 
-# Create a fake HTML file to test the Nginx configuration
-echo "<html>
+# Create a test HTML file
+cat > /data/web_static/releases/test/index.html << 'HTMLEOF'
+<html>
   <head>
   </head>
   <body>
     Holberton School
   </body>
-</html>" > /data/web_static/releases/test/index.html
+</html>
+HTMLEOF
 
-# Create (or recreate) the symbolic link
-ln -sf /data/web_static/releases/test/ /data/web_static/current
+# Remove existing symlink and recreate it
+rm -rf /data/web_static/current
+ln -s /data/web_static/releases/test/ /data/web_static/current
 
-# Give ownership of /data/ to the ubuntu user and group, recursively
+# Give ownership of /data/ to ubuntu user and group recursively
 chown -R ubuntu:ubuntu /data/
 
-# Overwrite the default Nginx site config to serve /data/web_static/current/
-# at /hbnb_static/ using an alias. Writing the whole block avoids depending on
-# any pre-existing line (server_name differs across Nginx/Ubuntu versions).
-printf '%s\n' "server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    root /var/www/html;
-    index index.html index.htm;
-    server_name _;
+# Configure Nginx to serve /hbnb_static using alias directive
+python3 -c '
+import re
+with open("/etc/nginx/sites-available/default") as f:
+    content = f.read()
+content = re.sub(r"[ \t]*location\s+/hbnb_static\b[^}]*\}", "", content)
+block = "\n\tlocation /hbnb_static {\n\t\talias /data/web_static/current/;\n\t}"
+content = content.replace("server_name _;", "server_name _;" + block, 1)
+with open("/etc/nginx/sites-available/default", "w") as f:
+    f.write(content)
+'
 
-    location /hbnb_static/ {
-        alias /data/web_static/current/;
-    }
-
-    location / {
-        try_files \$uri \$uri/ =404;
-    }
-}" > /etc/nginx/sites-available/default
-
-# Restart Nginx to apply the new configuration
+# Restart Nginx
 service nginx restart
+
+exit 0

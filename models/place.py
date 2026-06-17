@@ -1,18 +1,10 @@
 #!/usr/bin/python3
-"""This module defines the Place class.
-
-Place represents a rental property listing. It supports both
-FileStorage (with property accessors) and DBStorage (with SQLAlchemy
-relationships), including a Many-to-Many link with Amenity.
-"""
+"""This module defines the Place class."""
 import os
 from models.base_model import BaseModel, Base
 from sqlalchemy import Column, String, Integer, Float, ForeignKey, Table
 from sqlalchemy.orm import relationship
 
-# This is the join table for the many-to-many relationship between
-# Place and Amenity. It just holds pairs of (place_id, amenity_id).
-# Example: place "Beach House" has amenities "Wifi" and "Pool"
 place_amenity = Table(
     'place_amenity',
     Base.metadata,
@@ -32,7 +24,7 @@ place_amenity = Table(
 
 
 class Place(BaseModel, Base):
-    """Represents a rental listing (like an Airbnb property)."""
+    """Represents a rental listing."""
 
     __tablename__ = 'places'
 
@@ -48,21 +40,17 @@ class Place(BaseModel, Base):
     longitude = Column(Float, nullable=True)
 
     if os.getenv('HBNB_TYPE_STORAGE') == 'db':
-        # DBStorage relationships
-        # Deleting a place also deletes all its reviews
         reviews = relationship(
             'Review',
             backref='place',
             cascade='all, delete-orphan'
         )
-        # Many-to-many with Amenity via the place_amenity table
         amenities = relationship(
             'Amenity',
             secondary='place_amenity',
             viewonly=False
         )
     else:
-        # FileStorage: list of amenity ids linked to this place
         amenity_ids = []
 
         @property
@@ -87,7 +75,7 @@ class Place(BaseModel, Base):
 
         @amenities.setter
         def amenities(self, obj):
-            """Add an Amenity to this place by appending its id."""
+            """Add an Amenity to this place."""
             from models.amenity import Amenity
             if isinstance(obj, Amenity):
                 if obj.id not in self.amenity_ids:

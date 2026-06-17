@@ -14,9 +14,6 @@ class Amenity(BaseModel, Base):
     name = Column(String(128), nullable=False)
 
     if os.getenv('HBNB_TYPE_STORAGE') == 'db':
-        # Many-to-many: an amenity can belong to many places,
-        # and a place can have many amenities.
-        # The 'place_amenity' table in the middle links them.
         place_amenities = relationship(
             'Place',
             secondary='place_amenity',

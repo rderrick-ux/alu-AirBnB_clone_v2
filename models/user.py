@@ -12,16 +12,14 @@ class User(BaseModel, Base):
 
     email = Column(String(128), nullable=False)
     password = Column(String(128), nullable=False)
-    first_name = Column(String(128), nullable=True)   # optional
-    last_name = Column(String(128), nullable=True)    # optional
+    first_name = Column(String(128), nullable=True)
+    last_name = Column(String(128), nullable=True)
 
-    # A user can own many places - deleting the user deletes their places
     places = relationship(
         'Place',
         backref='user',
         cascade='all, delete-orphan'
     )
-    # A user can write many reviews - deleting the user deletes their reviews
     reviews = relationship(
         'Review',
         backref='user',
